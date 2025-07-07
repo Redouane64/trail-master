@@ -7,6 +7,13 @@ export const trailPointSchema = z.object({
   lon: z.number(),
 });
 
+// Route segment schema for storing routed paths between points
+export const routeSegmentSchema = z.object({
+  coordinates: z.array(z.tuple([z.number(), z.number()])), // [lng, lat] pairs
+  distance: z.number().optional(),
+  duration: z.number().optional(),
+});
+
 // Location schema for GraphQL submission
 export const locationSchema = z.object({
   country: z.string().min(1, "Country is required"),
@@ -35,6 +42,7 @@ export const trailFormSchema = z.object({
 });
 
 export type TrailPoint = z.infer<typeof trailPointSchema>;
+export type RouteSegment = z.infer<typeof routeSegmentSchema>;
 export type Location = z.infer<typeof locationSchema>;
 export type Track = z.infer<typeof trackSchema>;
 export type TrailFormData = z.infer<typeof trailFormSchema>;

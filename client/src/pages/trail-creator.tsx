@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { TrailPoint, type TrailFormData } from "@shared/schema";
+import { TrailPoint, RouteSegment, type TrailFormData } from "@shared/schema";
 import { generateCreateTrailMutation } from "@/lib/graphql-client";
+import { calculateTotalRouteDistance, calculateTotalRouteDuration } from "@/lib/routing";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Route, Copy } from "lucide-react";
 
@@ -18,6 +19,7 @@ import { CheckCircle, XCircle, Route, Copy } from "lucide-react";
 export default function TrailCreator() {
   const [points, setPoints] = useState<TrailPoint[]>([]);
   const [drawingMode, setDrawingMode] = useState(false);
+  const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -104,10 +106,20 @@ export default function TrailCreator() {
   const handleCreateNew = () => {
     setShowSuccessModal(false);
     setCreatedTrail(null);
+    setRouteSegments([]);
     handleClearAll();
   };
 
+  const handleRouteUpdate = (segments: RouteSegment[]) => {
+    setRouteSegments(segments);
+  };
+
   const calculateDistance = (points: TrailPoint[]): number => {
+    // Use routed distance if available, otherwise fall back to straight-line distance
+    if (routeSegments.length > 0) {
+      return Math.round(calculateTotalRouteDistance(routeSegments));
+    }
+    
     if (points.length < 2) return 0;
     
     let total = 0;
@@ -132,7 +144,9 @@ export default function TrailCreator() {
   };
 
   const distance = calculateDistance(points);
-  const estimatedTime = Math.round(distance / 1000 * 15 * 60000); // 15 min per km
+  // Use routed duration if available, otherwise estimate based on distance
+  const routeDuration = routeSegments.length > 0 ? calculateTotalRouteDuration(routeSegments) : 0;
+  const estimatedTime = routeDuration > 0 ? Math.round(routeDuration / 60) : Math.round(distance / 1000 * 15); // 15 minutes per km
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -172,6 +186,7 @@ export default function TrailCreator() {
             onClearAll={handleClearAll}
             drawingMode={drawingMode}
             onDrawingModeToggle={() => setDrawingMode(!drawingMode)}
+            onRouteUpdate={handleRouteUpdate}
           />
           
           <TrailStatsOverlay

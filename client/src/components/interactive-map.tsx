@@ -3,7 +3,8 @@ import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from "react-l
 import { LatLngExpression, Icon } from "leaflet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TrailPoint } from "@shared/schema";
+import { TrailPoint, RouteSegment } from "@shared/schema";
+import { getRoutedTrail, routeSegmentsToLatLngs } from "@/lib/routing";
 import { Plus, Minus, Pencil, Undo, Trash2 } from "lucide-react";
 
 // Leaflet CSS is imported globally in index.css
@@ -42,6 +43,7 @@ interface InteractiveMapProps {
   onClearAll: () => void;
   drawingMode: boolean;
   onDrawingModeToggle: () => void;
+  onRouteUpdate?: (segments: RouteSegment[]) => void;
 }
 
 function MapClickHandler({ 
@@ -77,15 +79,45 @@ export function InteractiveMap({
   onClearAll,
   drawingMode,
   onDrawingModeToggle,
+  onRouteUpdate,
 }: InteractiveMapProps) {
   const mapRef = useRef<any>(null);
   const [center] = useState<LatLngExpression>([47.6062, -122.3321]); // Seattle default
   const [mapKey, setMapKey] = useState(0); // Force re-render if needed
+  const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([]);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   
   useEffect(() => {
     console.log("InteractiveMap component mounted");
     console.log("Leaflet available:", typeof window !== 'undefined' && window.L);
   }, []);
+
+  // Calculate route segments when points change
+  useEffect(() => {
+    const calculateRoute = async () => {
+      if (points.length < 2) {
+        setRouteSegments([]);
+        onRouteUpdate?.([]); 
+        return;
+      }
+
+      setIsLoadingRoute(true);
+      try {
+        const segments = await getRoutedTrail(points);
+        setRouteSegments(segments);
+        onRouteUpdate?.(segments);
+      } catch (error) {
+        console.error('Failed to calculate route:', error);
+        // Fallback to straight lines
+        setRouteSegments([]);
+        onRouteUpdate?.([]); 
+      } finally {
+        setIsLoadingRoute(false);
+      }
+    };
+
+    calculateRoute();
+  }, [points, onRouteUpdate]);
 
   const handleUndo = () => {
     if (points.length > 0) {
@@ -107,8 +139,10 @@ export function InteractiveMap({
     }
   };
 
-  // Convert points to LatLng for polyline
-  const pathCoordinates: LatLngExpression[] = points.map(point => [point.lat, point.lon]);
+  // Use routed coordinates if available, otherwise fall back to straight lines
+  const pathCoordinates: LatLngExpression[] = routeSegments.length > 0 
+    ? routeSegmentsToLatLngs(routeSegments)
+    : points.map(point => [point.lat, point.lon]);
 
   return (
     <div className="flex-1 relative map-container">
@@ -122,6 +156,7 @@ export function InteractiveMap({
               onClick={onDrawingModeToggle}
               className="w-10 h-10 p-0"
               title="Toggle Drawing Mode"
+              disabled={isLoadingRoute}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -170,6 +205,15 @@ export function InteractiveMap({
             </Button>
           </div>
         </Card>
+        
+        {/* Route Loading Indicator */}
+        {isLoadingRoute && (
+          <Card className="p-2 bg-blue-50 border-blue-200 shadow-lg">
+            <div className="text-xs text-center text-blue-700">
+              Calculating route...
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Drawing Mode Status */}
