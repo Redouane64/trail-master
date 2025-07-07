@@ -9,8 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TrailPoint, trailFormSchema, type TrailFormData } from "@shared/schema";
-import { useJWTAuth } from "@/contexts/jwt-auth-context";
-import { Save, Trash2, X, Shield, CheckCircle, AlertTriangle } from "lucide-react";
+import { Save, Trash2, X } from "lucide-react";
 
 // Using shared schema from @shared/schema
 
@@ -29,7 +28,6 @@ export function TrailCreationSidebar({
   onRemovePoint,
   isSubmitting,
 }: TrailCreationSidebarProps) {
-  const { isAuthenticated } = useJWTAuth();
   
   const form = useForm<TrailFormData>({
     resolver: zodResolver(trailFormSchema),
@@ -93,27 +91,7 @@ export function TrailCreationSidebar({
             </div>
           </div>
           
-          {/* Authentication Status */}
-          <Card className={`p-3 mb-4 ${isAuthenticated ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
-            <div className="flex items-center gap-2">
-              {isAuthenticated ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">JWT Authenticated</span>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm font-medium text-orange-800">JWT Token Required</span>
-                </>
-              )}
-            </div>
-            {!isAuthenticated && (
-              <p className="text-xs text-orange-700 mt-1">
-                Set your JWT token in the header to submit trails
-              </p>
-            )}
-          </Card>
+          {/* Trail Progress Status */}
           
           {/* Progress Indicator */}
           <div className="bg-gray-100 rounded-full h-2 mb-3">
@@ -242,7 +220,7 @@ export function TrailCreationSidebar({
                           type="number" 
                           placeholder="90" 
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value) * 60000)} // Convert to milliseconds
+                          onChange={(e) => field.onChange(Number(e.target.value))} // Keep as minutes
                         />
                       </FormControl>
                       <FormMessage />
@@ -286,27 +264,16 @@ export function TrailCreationSidebar({
               <Button 
                 type="submit" 
                 className="w-full"
-                disabled={isSubmitting || points.length < 2 || !isAuthenticated}
-                variant={!isAuthenticated ? "secondary" : "default"}
+                disabled={isSubmitting || points.length < 2}
+                variant="default"
               >
-                {!isAuthenticated ? (
-                  <>
-                    <Shield className="w-4 h-4 mr-2" />
-                    JWT Token Required
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    {isSubmitting ? "Creating..." : "Create Trail"}
-                  </>
-                )}
+                <Save className="w-4 h-4 mr-2" />
+                {isSubmitting ? "Generating..." : "Generate GraphQL"}
               </Button>
               
-              {!isAuthenticated && (
-                <p className="text-xs text-center text-gray-500">
-                  Click "JWT Auth" in the header to set your authentication token
-                </p>
-              )}
+              <p className="text-xs text-center text-gray-500">
+                This will generate a GraphQL mutation for your trail
+              </p>
               
               <Button 
                 type="button" 

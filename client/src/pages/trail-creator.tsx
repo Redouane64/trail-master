@@ -4,15 +4,14 @@ import { TrailCreationSidebar } from "@/components/trail-creation-sidebar";
 import { InteractiveMap } from "@/components/interactive-map";
 import { TrailStatsOverlay } from "@/components/trail-stats-overlay";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-import { JWTAuthDialog } from "@/components/jwt-auth-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { TrailPoint, type TrailFormData } from "@shared/schema";
-import { submitTrailToGraphQL } from "@/lib/graphql-client";
-import { useJWTAuth } from "@/contexts/jwt-auth-context";
+import { generateCreateTrailMutation } from "@/lib/graphql-client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, HelpCircle, Route, Shield } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Route, Copy } from "lucide-react";
 
 // Using TrailFormData type from @shared/schema
 
@@ -25,15 +24,9 @@ export default function TrailCreator() {
   const [createdTrail, setCreatedTrail] = useState<any>(null);
 
   const { toast } = useToast();
-  const { token: jwtToken, setToken: setJwtToken, isAuthenticated } = useJWTAuth();
 
-  const submitTrailMutation = useMutation({
+  const generateGraphQLMutation = useMutation({
     mutationFn: async (data: TrailFormData & { points: TrailPoint[] }) => {
-      // Check if JWT token is available
-      if (!jwtToken) {
-        throw new Error("JWT authentication token is required. Please set your JWT token first.");
-      }
-
       if (data.points.length === 0) {
         throw new Error("Please add at least one point to the trail");
       }
@@ -59,24 +52,24 @@ export default function TrailCreator() {
         allowedForStartingDisciplinesIds: [],
       };
       
-      // Submit directly to GraphQL service
-      const result = await submitTrailToGraphQL(graphqlTrailInput, jwtToken);
-      return result;
+      // Generate GraphQL mutation string
+      const graphqlQuery = generateCreateTrailMutation(graphqlTrailInput);
+      return { query: graphqlQuery, data: graphqlTrailInput };
     },
     onSuccess: (result) => {
       setCreatedTrail(result);
       setShowSuccessModal(true);
       toast({
-        title: "Trail Submitted Successfully",
-        description: "Your trail has been successfully submitted to the GraphQL service.",
+        title: "GraphQL Query Generated",
+        description: "Your trail GraphQL mutation has been generated successfully.",
       });
     },
     onError: (error) => {
-      setErrorMessage(error.message || "Failed to submit trail");
+      setErrorMessage(error.message || "Failed to generate GraphQL query");
       setShowErrorModal(true);
       toast({
         title: "Error",
-        description: error.message || "Failed to submit trail",
+        description: error.message || "Failed to generate GraphQL query",
         variant: "destructive",
       });
     },
@@ -105,7 +98,7 @@ export default function TrailCreator() {
       return;
     }
 
-    submitTrailMutation.mutate({ ...formData, points });
+    generateGraphQLMutation.mutate({ ...formData, points });
   };
 
   const handleCreateNew = () => {
@@ -154,10 +147,7 @@ export default function TrailCreator() {
               <h1 className="text-xl font-semibold text-gray-900">Trail Creator</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <JWTAuthDialog 
-                onTokenChange={setJwtToken}
-                currentToken={jwtToken}
-              />
+              {/* GraphQL generation mode - no authentication needed */}
               <Button variant="ghost" size="sm">
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Help
@@ -174,7 +164,7 @@ export default function TrailCreator() {
           onSubmit={handleTrailSubmit}
           onClearTrail={handleClearAll}
           onRemovePoint={handlePointRemove}
-          isSubmitting={submitTrailMutation.isPending}
+          isSubmitting={generateGraphQLMutation.isPending}
         />
         
         <div className="flex-1 relative">
@@ -196,8 +186,8 @@ export default function TrailCreator() {
       </div>
 
       <LoadingOverlay 
-        isVisible={submitTrailMutation.isPending}
-        message="Please wait while we submit your trail..."
+        isVisible={generateGraphQLMutation.isPending}
+        message="Please wait while we generate your GraphQL mutation..."
       />
 
       {/* Success Modal */}
@@ -209,21 +199,42 @@ export default function TrailCreator() {
                 <CheckCircle className="text-white h-8 w-8" />
               </div>
               <DialogTitle className="text-xl font-semibold text-gray-900 mb-2">
-                Trail Created Successfully!
+                GraphQL Query Generated!
               </DialogTitle>
               <p className="text-gray-600 mb-6">
-                Your trail has been saved and is now available.
+                Your trail GraphQL mutation has been generated successfully. You can copy and use it with your GraphQL service.
               </p>
+              
+              {createdTrail && (
+                <div className="bg-white p-4 rounded-lg border text-left mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">Generated GraphQL Mutation:</h4>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdTrail.query);
+                        toast({ title: "Copied to clipboard!" });
+                      }}
+                    >
+                      <Copy className="w-4 h-4 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                  <Textarea
+                    value={createdTrail.query}
+                    readOnly
+                    className="font-mono text-xs h-64 resize-none"
+                  />
+                </div>
+              )}
+              
               <div className="flex space-x-3 w-full">
-                <Button className="flex-1">
-                  View Trail
-                </Button>
                 <Button 
-                  variant="outline" 
                   className="flex-1"
                   onClick={handleCreateNew}
                 >
-                  Create New
+                  Create New Trail
                 </Button>
               </div>
             </div>
@@ -240,7 +251,7 @@ export default function TrailCreator() {
                 <XCircle className="text-white h-8 w-8" />
               </div>
               <DialogTitle className="text-xl font-semibold text-gray-900 mb-2">
-                Error Creating Trail
+                Error Generating GraphQL
               </DialogTitle>
               <p className="text-gray-600 mb-6">
                 {errorMessage}

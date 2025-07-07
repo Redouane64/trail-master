@@ -29,8 +29,8 @@ export const trailFormSchema = z.object({
   description: z.string().optional(),
   country: z.string().min(1, "Country is required"),
   city: z.string().min(1, "City is required"),
-  distance: z.number().min(0, "Distance must be positive"),
-  approximateTime: z.number().min(0, "Time must be positive"),
+  distance: z.coerce.number().min(0, "Distance must be positive"),
+  approximateTime: z.coerce.number().min(1, "Time must be at least 1 minute"),
   isActive: z.boolean().default(true),
 });
 

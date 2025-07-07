@@ -56,15 +56,15 @@ This is a full-stack web application for creating and managing hiking trails. Th
 1. User interacts with map to place points
 2. Points are stored in local React state only
 3. Form captures trail information with client-side validation
-4. On submission, data is sent directly to GraphQL service with JWT authentication
+4. On submission, GraphQL mutation query is generated and displayed in popup
 5. No database storage - trail exists only during creation session
-6. Users must submit to GraphQL or lose work when starting fresh
+6. Users can copy GraphQL query for use with external services
 
 ### Data Structure
 - **Trail Points**: Latitude/longitude coordinates stored in browser state
 - **Metadata**: Distance, time calculations done client-side
-- **Location Data**: Country, city, and geographic coordinates for GraphQL submission
-- **Authentication**: JWT token required for GraphQL service submission
+- **Location Data**: Country, city, and geographic coordinates for GraphQL generation
+- **GraphQL Output**: Generated mutation queries ready for external service use
 
 ## External Dependencies
 
@@ -107,15 +107,17 @@ This is a full-stack web application for creating and managing hiking trails. Th
 - July 07, 2025. Initial setup
 - July 07, 2025. Added JWT authentication system with manual token input UI for secure GraphQL trail submissions
 - July 07, 2025. Removed database/storage logic, implemented single-trail workflow with direct GraphQL submission
+- July 07, 2025. Removed JWT authentication, implemented GraphQL query generation popup display instead of API submission
 
 ## Recent Changes
 ✓ Single-trail workflow implemented (no database storage)
 ✓ Removed all in-memory database and PostgreSQL dependencies
-✓ Direct GraphQL submission with JWT authentication
-✓ Removed Account button from UI (no user accounts)
-✓ Simplified schema to focus on trail creation and submission
+✓ Removed JWT authentication UI and logic completely
+✓ GraphQL query generation popup instead of API submission
+✓ Fixed time input validation to handle minute values correctly
+✓ Simplified schema to focus on trail creation and query generation
 ✓ Updated backend to minimal health check endpoint only
-✓ Users can create one trail at a time: submit to backend or start fresh
+✓ Users can create one trail at a time: generate GraphQL query or start fresh
 
 ## User Preferences
 
