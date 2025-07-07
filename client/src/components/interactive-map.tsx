@@ -92,7 +92,7 @@ export function InteractiveMap({
     console.log("Leaflet available:", typeof window !== 'undefined' && window.L);
   }, []);
 
-  // Calculate route segments when points change
+  // Calculate route segments when points change - only if API key is available
   useEffect(() => {
     const calculateRoute = async () => {
       if (points.length < 2) {
@@ -101,14 +101,23 @@ export function InteractiveMap({
         return;
       }
 
-      setIsLoadingRoute(true);
+      // Only attempt routing if we have an API key
+      const hasApiKey = typeof window !== 'undefined' && localStorage.getItem('openrouteservice_api_key');
+      if (!hasApiKey) {
+        console.log('No OpenRouteService API key found - using straight lines');
+        setRouteSegments([]);
+        onRouteUpdate?.([]); 
+        return;
+      }
+
       try {
+        console.log('Calculating route with API key');
+        setIsLoadingRoute(true);
         const segments = await getRoutedTrail(points);
         setRouteSegments(segments);
         onRouteUpdate?.(segments);
       } catch (error) {
-        console.error('Failed to calculate route:', error);
-        // Fallback to straight lines
+        console.warn('Routing failed, falling back to straight line:', error);
         setRouteSegments([]);
         onRouteUpdate?.([]); 
       } finally {
@@ -116,7 +125,9 @@ export function InteractiveMap({
       }
     };
 
-    calculateRoute();
+    // Small delay to prevent rapid recalculations
+    const timeoutId = setTimeout(calculateRoute, 200);
+    return () => clearTimeout(timeoutId);
   }, [points, onRouteUpdate]);
 
   const handleUndo = () => {
@@ -156,7 +167,6 @@ export function InteractiveMap({
               onClick={onDrawingModeToggle}
               className="w-10 h-10 p-0"
               title="Toggle Drawing Mode"
-              disabled={isLoadingRoute}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -205,15 +215,6 @@ export function InteractiveMap({
             </Button>
           </div>
         </Card>
-        
-        {/* Route Loading Indicator */}
-        {isLoadingRoute && (
-          <Card className="p-2 bg-blue-50 border-blue-200 shadow-lg">
-            <div className="text-xs text-center text-blue-700">
-              Calculating route...
-            </div>
-          </Card>
-        )}
       </div>
 
       {/* Drawing Mode Status */}
