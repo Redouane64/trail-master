@@ -6,8 +6,7 @@ import { Card } from "@/components/ui/card";
 import { TrailPoint } from "@shared/schema";
 import { Plus, Minus, Pencil, Undo, Trash2 } from "lucide-react";
 
-// Fix Leaflet icon issue
-import "leaflet/dist/leaflet.css";
+// Leaflet CSS is imported globally in index.css
 
 const icon = new Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -81,6 +80,12 @@ export function InteractiveMap({
 }: InteractiveMapProps) {
   const mapRef = useRef<any>(null);
   const [center] = useState<LatLngExpression>([47.6062, -122.3321]); // Seattle default
+  const [mapKey, setMapKey] = useState(0); // Force re-render if needed
+  
+  useEffect(() => {
+    console.log("InteractiveMap component mounted");
+    console.log("Leaflet available:", typeof window !== 'undefined' && window.L);
+  }, []);
 
   const handleUndo = () => {
     if (points.length > 0) {
@@ -106,7 +111,7 @@ export function InteractiveMap({
   const pathCoordinates: LatLngExpression[] = points.map(point => [point.lat, point.lon]);
 
   return (
-    <div className="flex-1 relative">
+    <div className="flex-1 relative map-container">
       {/* Map Controls */}
       <div className="absolute top-4 right-4 z-[1000] space-y-2">
         <Card className="p-2 bg-white shadow-lg">
@@ -180,47 +185,52 @@ export function InteractiveMap({
         </div>
       )}
 
-      <MapContainer
-        center={center}
-        zoom={13}
-        style={{ height: "100%", width: "100%" }}
-        ref={mapRef}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        <MapClickHandler onPointAdd={onPointAdd} drawingMode={drawingMode} />
-        
-        {/* Render markers */}
-        {points.map((point, index) => {
-          const isStart = index === 0;
-          const isEnd = index === points.length - 1 && points.length > 1;
-          let markerIcon = icon;
-          
-          if (isStart) markerIcon = startIcon;
-          else if (isEnd) markerIcon = endIcon;
-          
-          return (
-            <Marker
-              key={point.id}
-              position={[point.lat, point.lon]}
-              icon={markerIcon}
-            />
-          );
-        })}
-        
-        {/* Render path */}
-        {pathCoordinates.length > 1 && (
-          <Polyline
-            positions={pathCoordinates}
-            color="#1976D2"
-            weight={4}
-            opacity={0.8}
+      {/* Map Container with Error Boundary */}
+      <div className="w-full h-full bg-gray-100 rounded-lg overflow-hidden">
+        <MapContainer
+          center={center}
+          zoom={13}
+          style={{ height: "100%", width: "100%" }}
+          ref={mapRef}
+          className="leaflet-container"
+          key={`map-${mapKey}`}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-        )}
-      </MapContainer>
+          
+          <MapClickHandler onPointAdd={onPointAdd} drawingMode={drawingMode} />
+          
+          {/* Render markers */}
+          {points.map((point, index) => {
+            const isStart = index === 0;
+            const isEnd = index === points.length - 1 && points.length > 1;
+            let markerIcon = icon;
+            
+            if (isStart) markerIcon = startIcon;
+            else if (isEnd) markerIcon = endIcon;
+            
+            return (
+              <Marker
+                key={point.id}
+                position={[point.lat, point.lon]}
+                icon={markerIcon}
+              />
+            );
+          })}
+          
+          {/* Render path */}
+          {pathCoordinates.length > 1 && (
+            <Polyline
+              positions={pathCoordinates}
+              color="#1976D2"
+              weight={4}
+              opacity={0.8}
+            />
+          )}
+        </MapContainer>
+      </div>
     </div>
   );
 }
