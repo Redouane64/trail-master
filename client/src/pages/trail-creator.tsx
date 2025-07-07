@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TrailPoint, type TrailFormData } from "@shared/schema";
 import { generateCreateTrailMutation } from "@/lib/graphql-client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, HelpCircle, Route, Copy } from "lucide-react";
+import { CheckCircle, XCircle, Route, Copy } from "lucide-react";
 
 // Using TrailFormData type from @shared/schema
 
@@ -148,10 +148,7 @@ export default function TrailCreator() {
             </div>
             <div className="flex items-center space-x-4">
               {/* GraphQL generation mode - no authentication needed */}
-              <Button variant="ghost" size="sm">
-                <HelpCircle className="w-4 h-4 mr-2" />
-                Help
-              </Button>
+
 
             </div>
           </div>
