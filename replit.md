@@ -16,12 +16,12 @@ This is a full-stack web application for creating and managing hiking trails. Th
 - **Forms**: React Hook Form with Zod validation
 
 ### Backend Architecture
-- **Framework**: Express.js with TypeScript
-- **Database ORM**: Drizzle ORM with PostgreSQL
-- **API Design**: RESTful API with JSON responses
-- **Database**: Neon serverless PostgreSQL
-- **Session Management**: PostgreSQL session store
+- **Framework**: Express.js with TypeScript (minimal server)
+- **API Design**: Simple health check endpoint only
+- **GraphQL Submission**: Direct client-side submission to external GraphQL service
+- **Authentication**: JWT token validation for GraphQL requests
 - **Development**: Vite for development server and HMR
+- **Storage**: No database - single trail workflow only
 
 ### Build System
 - **Build Tool**: Vite for frontend bundling
@@ -52,19 +52,19 @@ This is a full-stack web application for creating and managing hiking trails. Th
 
 ## Data Flow
 
-### Trail Creation Process
+### Single Trail Creation Process
 1. User interacts with map to place points
-2. Points are stored in local state with coordinates and metadata
-3. Form captures trail information and validation
-4. On submission, data is sent to Express API
-5. Backend validates and stores in PostgreSQL
-6. Success/error feedback displayed to user
+2. Points are stored in local React state only
+3. Form captures trail information with client-side validation
+4. On submission, data is sent directly to GraphQL service with JWT authentication
+5. No database storage - trail exists only during creation session
+6. Users must submit to GraphQL or lose work when starting fresh
 
-### Database Schema
-- **Trails Table**: Core trail information with JSON points storage
-- **Point Storage**: Latitude/longitude coordinates as integers for precision
-- **Metadata**: Distance, time, elevation, and activity status
-- **Location Data**: Country, city, and geographic coordinates
+### Data Structure
+- **Trail Points**: Latitude/longitude coordinates stored in browser state
+- **Metadata**: Distance, time calculations done client-side
+- **Location Data**: Country, city, and geographic coordinates for GraphQL submission
+- **Authentication**: JWT token required for GraphQL service submission
 
 ## External Dependencies
 
@@ -106,14 +106,16 @@ This is a full-stack web application for creating and managing hiking trails. Th
 ## Changelog
 - July 07, 2025. Initial setup
 - July 07, 2025. Added JWT authentication system with manual token input UI for secure GraphQL trail submissions
+- July 07, 2025. Removed database/storage logic, implemented single-trail workflow with direct GraphQL submission
 
 ## Recent Changes
-✓ JWT Authentication System
-✓ Manual JWT token input dialog in header
-✓ Authentication status indicators in sidebar
-✓ Backend JWT validation for trail submissions
-✓ GraphQL client updated with JWT support
-✓ Authentication context provider for state management
+✓ Single-trail workflow implemented (no database storage)
+✓ Removed all in-memory database and PostgreSQL dependencies
+✓ Direct GraphQL submission with JWT authentication
+✓ Removed Account button from UI (no user accounts)
+✓ Simplified schema to focus on trail creation and submission
+✓ Updated backend to minimal health check endpoint only
+✓ Users can create one trail at a time: submit to backend or start fresh
 
 ## User Preferences
 

@@ -8,21 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { TrailPoint } from "@shared/schema";
+import { TrailPoint, trailFormSchema, type TrailFormData } from "@shared/schema";
 import { useJWTAuth } from "@/contexts/jwt-auth-context";
 import { Save, Trash2, X, Shield, CheckCircle, AlertTriangle } from "lucide-react";
 
-const trailFormSchema = z.object({
-  name: z.string().min(1, "Trail name is required"),
-  description: z.string().optional(),
-  country: z.string().min(1, "Country is required"),
-  city: z.string().min(1, "City is required"),
-  distance: z.coerce.number().min(1, "Distance must be greater than 0"),
-  approximateTime: z.coerce.number().min(1, "Time must be greater than 0"),
-  isActive: z.boolean().default(true),
-});
-
-type TrailFormData = z.infer<typeof trailFormSchema>;
+// Using shared schema from @shared/schema
 
 interface TrailCreationSidebarProps {
   points: TrailPoint[];

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { TrailCreationSidebar } from "@/components/trail-creation-sidebar";
 import { InteractiveMap } from "@/components/interactive-map";
 import { TrailStatsOverlay } from "@/components/trail-stats-overlay";
@@ -8,21 +8,13 @@ import { JWTAuthDialog } from "@/components/jwt-auth-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrailPoint } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { TrailPoint, type TrailFormData } from "@shared/schema";
+import { submitTrailToGraphQL } from "@/lib/graphql-client";
 import { useJWTAuth } from "@/contexts/jwt-auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, User, HelpCircle, Route, Shield } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Route, Shield } from "lucide-react";
 
-interface TrailFormData {
-  name: string;
-  description?: string;
-  country: string;
-  city: string;
-  distance: number;
-  approximateTime: number;
-  isActive: boolean;
-}
+// Using TrailFormData type from @shared/schema
 
 export default function TrailCreator() {
   const [points, setPoints] = useState<TrailPoint[]>([]);
@@ -33,53 +25,58 @@ export default function TrailCreator() {
   const [createdTrail, setCreatedTrail] = useState<any>(null);
 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { token: jwtToken, setToken: setJwtToken, isAuthenticated } = useJWTAuth();
 
-  const createTrailMutation = useMutation({
+  const submitTrailMutation = useMutation({
     mutationFn: async (data: TrailFormData & { points: TrailPoint[] }) => {
       // Check if JWT token is available
       if (!jwtToken) {
         throw new Error("JWT authentication token is required. Please set your JWT token first.");
       }
 
-      // First create the trail in our backend
-      const response = await apiRequest("POST", "/api/trails", {
+      if (data.points.length === 0) {
+        throw new Error("Please add at least one point to the trail");
+      }
+
+      // Create GraphQL input directly
+      const graphqlTrailInput = {
         name: data.name,
+        location: {
+          country: data.country,
+          city: data.city,
+          point: { lat: data.points[0].lat, lon: data.points[0].lon },
+          title: null,
+        },
+        track: {
+          points: data.points,
+        },
         description: data.description || "",
-        country: data.country,
-        city: data.city,
-        latitude: Math.round(data.points[0].lat * 1000000), // Convert to integer for storage
-        longitude: Math.round(data.points[0].lon * 1000000),
+        isActive: data.isActive,
         distance: data.distance,
         approximateTime: data.approximateTime,
-        isActive: data.isActive,
-        points: data.points,
-      });
+        imagesIds: [],
+        availableDisciplinesIds: [],
+        allowedForStartingDisciplinesIds: [],
+      };
       
-      const trail = await response.json();
-      
-      // Then submit to external GraphQL service with JWT authentication
-      const submitResponse = await apiRequest("POST", `/api/trails/${trail.id}/submit`, {}, jwtToken);
-      const submitResult = await submitResponse.json();
-      
-      return { trail, submitResult };
+      // Submit directly to GraphQL service
+      const result = await submitTrailToGraphQL(graphqlTrailInput, jwtToken);
+      return result;
     },
     onSuccess: (result) => {
-      setCreatedTrail(result.trail);
+      setCreatedTrail(result);
       setShowSuccessModal(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/trails"] });
       toast({
-        title: "Trail Created",
-        description: "Your trail has been successfully created and submitted.",
+        title: "Trail Submitted Successfully",
+        description: "Your trail has been successfully submitted to the GraphQL service.",
       });
     },
     onError: (error) => {
-      setErrorMessage(error.message || "Failed to create trail");
+      setErrorMessage(error.message || "Failed to submit trail");
       setShowErrorModal(true);
       toast({
         title: "Error",
-        description: "Failed to create trail. Please try again.",
+        description: error.message || "Failed to submit trail",
         variant: "destructive",
       });
     },
@@ -108,7 +105,7 @@ export default function TrailCreator() {
       return;
     }
 
-    createTrailMutation.mutate({ ...formData, points });
+    submitTrailMutation.mutate({ ...formData, points });
   };
 
   const handleCreateNew = () => {
@@ -165,10 +162,7 @@ export default function TrailCreator() {
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Help
               </Button>
-              <Button size="sm">
-                <User className="w-4 h-4 mr-2" />
-                Account
-              </Button>
+
             </div>
           </div>
         </div>
@@ -180,7 +174,7 @@ export default function TrailCreator() {
           onSubmit={handleTrailSubmit}
           onClearTrail={handleClearAll}
           onRemovePoint={handlePointRemove}
-          isSubmitting={createTrailMutation.isPending}
+          isSubmitting={submitTrailMutation.isPending}
         />
         
         <div className="flex-1 relative">
@@ -202,8 +196,8 @@ export default function TrailCreator() {
       </div>
 
       <LoadingOverlay 
-        isVisible={createTrailMutation.isPending}
-        message="Please wait while we save your trail..."
+        isVisible={submitTrailMutation.isPending}
+        message="Please wait while we submit your trail..."
       />
 
       {/* Success Modal */}
@@ -255,7 +249,7 @@ export default function TrailCreator() {
                 <Button 
                   variant="destructive" 
                   className="flex-1"
-                  onClick={() => createTrailMutation.mutate}
+                  onClick={() => setShowErrorModal(false)}
                 >
                   Try Again
                 </Button>
